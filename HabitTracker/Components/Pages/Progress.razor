@@ -1,0 +1,102 @@
+﻿@page "/progress"
+<h3>Progress</h3>
+<table class="table">
+    <thead>
+        <tr>
+            <th></th>
+            @foreach(Day day in Habits.FirstOrDefault().Days)
+            {
+                <th class="text-center">@day.Date.DayOfWeek.ToString()</th>
+            }
+        </tr>
+    </thead>
+    <tbody>
+        @foreach(Habit habit in Habits)
+        {
+            <tr>
+                <th>@habit.Name</th>
+                @foreach (Day day in habit.Days)
+                {
+                    <td class="text-center @(!day.HabitStarted ? "HabitNotStarted" : "")">
+                        @if (day.Complete)
+                        {
+                            <span>✅</span>
+                        }
+                    </td>
+                }
+            </tr>
+        }
+    </tbody>
+</table>
+@code {
+    private List<Habit> Habits { get; set; }
+    private Data.AppDbContext? _dbcontext;
+
+    private class Habit
+    {
+        public string? Name { get; set; }
+        public List<Day> Days { get; set; }
+        public DateTime StartDate { get; set; }
+        public Guid Id { get; set; }
+    }
+    private class Day
+    {
+        public DateTime Date { get; set; }
+        public bool Complete { get; set; }
+        public bool HabitStarted { get; set; }
+    }
+    protected override async Task OnInitializedAsync()
+    {
+
+        int DaysBack = 7;
+        _dbcontext = await DbFactory.CreateDbContextAsync();
+
+        Habits = await _dbcontext.Habits
+            .Select(c => new Habit { 
+                Name = c.Name, 
+                Id = c.Id,
+                StartDate = c.CreatedAt,
+                Days = new List<Day>(), })
+            .ToListAsync();
+
+        DateTime HowFarBack = DateTime.Now.Date - new TimeSpan(24 * DaysBack, 0, 0);
+
+        List<Models.Action> Actions = await _dbcontext.Actions
+            .Include("Habit")
+            .Where(c => c.CreatedAt >= HowFarBack)
+            .ToListAsync();
+
+        foreach (Models.Action a in Actions)
+        {
+            a.CreatedAt = a.CreatedAt.Subtract(a.CreatedAt.TimeOfDay);
+        }
+
+        DateTime CurrentDate;
+        for (int i = 0; i < DaysBack; i++)
+        {
+            CurrentDate = DateTime.Now.Date - new TimeSpan(24 * i, 0, 0);
+            Day d;
+            foreach (var habit in Habits)
+            {
+                d = new Day 
+                {
+                    Date = CurrentDate,
+                    HabitStarted = CurrentDate >= habit.StartDate.Subtract(habit.StartDate.TimeOfDay)
+                };
+
+                /*
+                 * Moved this out of the object creation above because 
+                 * we safely assume that there are no completions to 
+                 * look for before the habit started.
+                 */
+                d.Complete = d.HabitStarted
+                    ? d.Complete = Actions.Any(a => 
+                        a.Habit.Id == habit.Id && 
+                        a.CreatedAt == CurrentDate)
+                    : false;
+
+                habit.Days.Add(d);
+            }
+        }
+    }
+}

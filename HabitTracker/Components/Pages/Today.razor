@@ -1,0 +1,60 @@
+﻿@page "/"
+@rendermode InteractiveServer
+
+<h3>Today</h3>
+@if (habits is null)
+{
+    <p>You don't have any habits! <a href="/habits">Go here</a> to add one now!</p>
+} 
+else 
+{
+    <div id="habit-list">
+    @foreach(var habit in habits)
+    {
+        <div>
+        @if(habit.Completed)
+        {
+            <button class="btn btn-secondary">@habit.Name</button>
+        }
+        else
+        {
+            <button class="btn btn-primary" @onmouseup="(args) => CompleteHabitToday(args, habit)">@habit.Name</button>
+        }
+        </div>
+    }
+    </div>
+}
+@code {
+    private List<HabitToday>? habits { get; set; }
+    private Data.AppDbContext? _dbcontext;
+    protected async Task CompleteHabitToday(MouseEventArgs args, Habit habit)
+    {
+        Habit? dbHabit;
+        if (_dbcontext is not null)
+        {
+            dbHabit = await _dbcontext.Habits.FirstOrDefaultAsync(i => i.Id == habit.Id);
+            if (dbHabit is not null)
+            {
+                _dbcontext.Actions.Add(new Models.Action(dbHabit));
+                await _dbcontext.SaveChangesAsync();
+                await RefreshData();
+            }
+        }
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        _dbcontext = await DbFactory.CreateDbContextAsync();
+        await RefreshData();
+
+    }
+    protected async Task RefreshData()
+    {
+        if (_dbcontext == null) { return; }
+        habits = await _dbcontext.Habits.Select(c => new HabitToday(c)).ToListAsync();
+        Models.Action[] AlreadyCompleted = await _dbcontext.Actions.Where(i => i.CreatedAt >= DateTime.Now.Date).ToArrayAsync();
+        foreach (HabitToday habit in habits)
+        {
+            if (AlreadyCompleted.Any(i => i.Habit.Id == habit.Id)) { habit.Completed = true; }
+        }
+    }
+}

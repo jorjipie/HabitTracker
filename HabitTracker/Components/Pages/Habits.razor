@@ -1,0 +1,111 @@
+﻿@page "/habits"
+@rendermode InteractiveServer
+
+<PageTitle>Habits</PageTitle>
+<h3>Habits</h3>
+@if (habits != null && habits.Count() > 0)
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var habit in habits)
+        {
+            <tr>
+                <td>@habit.Name</td>
+                    <td>
+                        <button type="button" class="btn btn-primary" @onmouseup="(args) => ShowConfirmDialogAsync(args, habit)">
+                            <span class="bi bi-trash"></span>
+                        </button>
+                    </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No habits found. Start by creating a good habit!</p>
+}
+<div>
+    <h4>Add a Habit</h4>
+
+    <form class="form-inline">
+        <div class="form-group">
+            <label for="NewHabitName">
+                New Habit Name:
+            </label>
+            <InputText class="form-control" @bind-Value="NewHabitName" @onkeyup="NewHabitKeyUp" />
+            <button type="button" class="btn btn-primary" @onmouseup="AddHabit">Add</button>
+            
+        </div>
+    </form>
+</div>
+<ConfirmDialog @ref="dialog" />
+@code {
+    private List<HabitTracker.Models.Habit>? habits { get; set; }
+    private string? NewHabitName { get; set; }
+    private Data.AppDbContext? _dbcontext;
+    private ConfirmDialog dialog = default!;
+    private async Task ShowConfirmDialogAsync(MouseEventArgs eventArgs, Habit habit)
+    {
+        var confirmation = await dialog.ShowAsync(title: "Are you sure?", message1: $"This will delete your habit: {habit.Name}!");
+        if (confirmation)
+        {
+            Console.WriteLine("Deleting!");
+            await DeleteHabit(habit);
+        }
+    }
+    private async Task DeleteHabit(Habit h)
+    {
+        Habit? habit = _dbcontext?.Habits.First(i => i.Id == h.Id);
+        if (habit != null)
+        {
+            _dbcontext?.Habits.Remove(habit);
+            if (_dbcontext is not null)
+            {
+                await _dbcontext.SaveChangesAsync();
+            }
+            await RefreshHabits();
+        }
+
+    }
+    private async Task NewHabitKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Code == "Enter" || e.Code == "NumpadEnter")
+        {
+            await AddHabit();
+        }
+    }
+    private async Task AddHabit()
+    {
+        if (NewHabitName == null) { return; }
+        Habit NewHabit = new Habit
+            {
+                Name = NewHabitName,
+                Id = Guid.NewGuid(),
+                CreatedAt = DateTime.Now
+            };
+        _dbcontext?.Habits.Add(NewHabit);
+        _dbcontext?.SaveChanges();
+        NewHabitName = null;
+        await RefreshHabits();
+    }
+    private async Task RefreshHabits()
+    {
+        if (_dbcontext is not null)
+        {
+            habits = await _dbcontext.Habits.ToListAsync();
+        }
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        Console.WriteLine("STuff!");
+        _dbcontext = DbFactory.CreateDbContext();
+        await RefreshHabits();
+    }
+}

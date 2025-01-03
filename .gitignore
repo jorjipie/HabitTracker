@@ -362,3 +362,6 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /HabitTracker/Data/habittracker.db
+*.db-shm
+*.db-wal
+/HabitTracker/habittracker.db

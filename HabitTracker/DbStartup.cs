@@ -14,26 +14,39 @@ namespace HabitTracker
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            string dbfile = "./habittracker.db";
-            if (!File.Exists(dbfile))
+            string BaseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string dbFilePath;
+            string dbfilename = "habittracker.db";
+            if (BaseDir.Substring(0, 1) == "/") { // *nix
+                dbFilePath = Path.Combine(BaseDir, dbfilename);
+            }
+            else if (BaseDir.IndexOf("\\bin") != 0) { // windows
+                dbFilePath = Path.GetFullPath(Path.Combine(BaseDir, @"..\..\..\" + dbfilename));
+            }
+            else
+            { //not sure how we'd get here.
+                throw new Exception("Oh no!");
+            }
+            Console.WriteLine(dbFilePath);
+            if (!File.Exists(dbFilePath))
             {
-                File.Create(dbfile).Close();
+                File.Create(dbFilePath).Close();
             }
 
-            if (IsFileInUseGeneric(dbfile))
+            if (IsFileInUseGeneric(dbFilePath))
             {
                 int retryCount = 0, retryMax = 60;
                 bool success = false;
-                Console.WriteLine($"Waiting for {dbfile} ...");
+                Console.WriteLine($"Waiting for {dbFilePath} ...");
                 while (retryCount < retryMax && !success)
                 {
                     Thread.Sleep(500);
-                    success = !IsFileInUseGeneric(dbfile);
+                    success = !IsFileInUseGeneric(dbFilePath);
                     retryCount++;
                 }
                 if (retryCount == retryMax)
                 {
-                    throw new Exception($"Unable to write to {dbfile}s");
+                    throw new Exception($"Unable to write to {dbFilePath}s");
                 }
             }
             

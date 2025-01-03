@@ -2,7 +2,7 @@
 @rendermode InteractiveServer
 
 <h3>Today</h3>
-@if (habits is null)
+@if (habits is null || !habits.Any())
 {
     <p>You don't have any habits! <a href="/habits">Go here</a> to add one now!</p>
 } 

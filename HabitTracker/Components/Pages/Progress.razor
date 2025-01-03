@@ -1,5 +1,7 @@
 ﻿@page "/progress"
 <h3>Progress</h3>
+@if (Habits.Any())
+{
 <table class="table">
     <thead>
         <tr>
@@ -27,7 +29,12 @@
             </tr>
         }
     </tbody>
-</table>
+    </table>
+}
+else
+{
+    <p>You don't have any habits! <a href="/habits">Go here</a> to add one now!</p>
+}
 @code {
     private List<Habit> Habits { get; set; }
     private Data.AppDbContext? _dbcontext;

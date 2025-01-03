@@ -14,7 +14,7 @@ namespace HabitTracker
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            string dbfile = "Data/habittracker.db";
+            string dbfile = "./habittracker.db";
             if (!File.Exists(dbfile))
             {
                 File.Create(dbfile).Close();

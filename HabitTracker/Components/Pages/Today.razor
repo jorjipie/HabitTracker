@@ -12,14 +12,11 @@ else
     @foreach(var habit in habits)
     {
         <div>
-        @if(habit.Completed)
-        {
-            <button class="btn btn-secondary">@habit.Name</button>
-        }
-        else
-        {
-            <button class="btn btn-primary" @onmouseup="(args) => CompleteHabitToday(args, habit)">@habit.Name</button>
-        }
+            <button 
+                class="btn @(habit.Completed ? "btn-secondary" : "btn-primary")" 
+                @onmouseup="(args) => ToggleCompleteHabit(args, habit)">
+                @habit.Name
+            </button>
         </div>
     }
     </div>
@@ -36,6 +33,49 @@ else
             if (dbHabit is not null)
             {
                 _dbcontext.Actions.Add(new Models.Action(dbHabit));
+                await _dbcontext.SaveChangesAsync();
+                await RefreshData();
+            }
+        }
+    }
+    protected async Task ToggleCompleteHabit(MouseEventArgs args, Habit habit)
+    {
+        if (_dbcontext is not null)
+        {
+            IQueryable<Models.Action> dbCompleteRecordQuery = _dbcontext.Actions
+                .Where(i =>
+                    i.Habit.Id == habit.Id &&
+                    i.CreatedAt >= DateTime.Today.Date);
+
+            Models.Action? Complete = await dbCompleteRecordQuery.FirstOrDefaultAsync();
+
+            if (Complete is null) {
+                var dbHabit = await _dbcontext.Habits.FirstOrDefaultAsync(i => i.Id == habit.Id);
+                if (dbHabit is not null) {
+                    _dbcontext.Actions.Add(new Models.Action(dbHabit));
+                }
+            }
+            else {
+                _dbcontext.Actions.Remove(Complete);
+            }
+
+            await _dbcontext.SaveChangesAsync();
+            await RefreshData();
+        }
+    }
+    protected async Task UncompleteHabitToday(MouseEventArgs args, Habit habit)
+    {
+        if (_dbcontext is not null)
+        {
+            var dbCompleteRecord = await _dbcontext.Actions
+                .Where(i => 
+                    i.Habit.Id == habit.Id && 
+                    i.CreatedAt >= DateTime.Today.Date)
+                .FirstOrDefaultAsync();
+
+            if (dbCompleteRecord is not null)
+            {
+                _dbcontext.Actions.Remove(dbCompleteRecord);
                 await _dbcontext.SaveChangesAsync();
                 await RefreshData();
             }

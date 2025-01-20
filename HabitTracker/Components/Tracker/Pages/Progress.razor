@@ -68,9 +68,10 @@ else
 
         DateTime HowFarBack = DateTime.Now.Date - new TimeSpan(24 * DaysBack, 0, 0);
 
+        Guid UserID = await UserData.GetCurrentUserGuid(AuthenticationStateProvider);
         List<Models.Action> Actions = await _dbcontext.Actions
             .Include("Habit")
-            .Where(c => c.CreatedAt >= HowFarBack)
+            .Where(c => c.CreatedAt >= HowFarBack && c.Habit.UserId == UserID)
             .ToListAsync();
 
         foreach (Models.Action a in Actions)

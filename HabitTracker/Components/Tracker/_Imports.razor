@@ -1,0 +1,8 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using BlazorBootstrap;
+@using HabitTracker.Data
+@using HabitTracker.Models
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<AppDbContext> DbFactory
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthenticationStateProvider

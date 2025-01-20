@@ -51,6 +51,7 @@ else
     private string? NewHabitName { get; set; }
     private Data.AppDbContext? _dbcontext;
     private ConfirmDialog dialog = default!;
+    private Guid _UserId { get;set; }
     private async Task ShowConfirmDialogAsync(MouseEventArgs eventArgs, Habit habit)
     {
         var confirmation = await dialog.ShowAsync(title: "Are you sure?", message1: $"This will delete your habit: {habit.Name}!");
@@ -88,6 +89,7 @@ else
             {
                 Name = NewHabitName,
                 Id = Guid.NewGuid(),
+                UserId = _UserId,
                 CreatedAt = DateTime.Now
             };
         _dbcontext?.Habits.Add(NewHabit);
@@ -99,13 +101,14 @@ else
     {
         if (_dbcontext is not null)
         {
-            habits = await _dbcontext.Habits.ToListAsync();
+            habits = await _dbcontext.Habits.Where(h => h.UserId == _UserId).ToListAsync();
         }
     }
     protected override async Task OnInitializedAsync()
     {
-        Console.WriteLine("STuff!");
         _dbcontext = DbFactory.CreateDbContext();
+        _UserId = await UserData.GetCurrentUserGuid(AuthenticationStateProvider);
         await RefreshHabits();
+
     }
 }

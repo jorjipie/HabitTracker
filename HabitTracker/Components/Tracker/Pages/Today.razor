@@ -23,20 +23,14 @@ else
 }
 @code {
     private List<HabitToday>? habits { get; set; }
+    Guid _UserId { get; set; }
     private Data.AppDbContext? _dbcontext;
-    protected async Task CompleteHabitToday(MouseEventArgs args, Habit habit)
+    protected override async Task OnInitializedAsync()
     {
-        Habit? dbHabit;
-        if (_dbcontext is not null)
-        {
-            dbHabit = await _dbcontext.Habits.FirstOrDefaultAsync(i => i.Id == habit.Id);
-            if (dbHabit is not null)
-            {
-                _dbcontext.Actions.Add(new Models.Action(dbHabit));
-                await _dbcontext.SaveChangesAsync();
-                await RefreshData();
-            }
-        }
+        _dbcontext = await DbFactory.CreateDbContextAsync();
+        _UserId = await UserData.GetCurrentUserGuid(AuthenticationStateProvider);
+        await RefreshData();
+
     }
     protected async Task ToggleCompleteHabit(MouseEventArgs args, Habit habit)
     {
@@ -44,6 +38,7 @@ else
         {
             IQueryable<Models.Action> dbCompleteRecordQuery = _dbcontext.Actions
                 .Where(i =>
+                    i.UserID == _UserId &&
                     i.Habit.Id == habit.Id &&
                     i.CreatedAt >= DateTime.Today.Date);
 
@@ -63,35 +58,12 @@ else
             await RefreshData();
         }
     }
-    protected async Task UncompleteHabitToday(MouseEventArgs args, Habit habit)
-    {
-        if (_dbcontext is not null)
-        {
-            var dbCompleteRecord = await _dbcontext.Actions
-                .Where(i => 
-                    i.Habit.Id == habit.Id && 
-                    i.CreatedAt >= DateTime.Today.Date)
-                .FirstOrDefaultAsync();
-
-            if (dbCompleteRecord is not null)
-            {
-                _dbcontext.Actions.Remove(dbCompleteRecord);
-                await _dbcontext.SaveChangesAsync();
-                await RefreshData();
-            }
-        }
-    }
-    protected override async Task OnInitializedAsync()
-    {
-        _dbcontext = await DbFactory.CreateDbContextAsync();
-        await RefreshData();
-
-    }
     protected async Task RefreshData()
     {
         if (_dbcontext == null) { return; }
-        habits = await _dbcontext.Habits.Select(c => new HabitToday(c)).ToListAsync();
-        Models.Action[] AlreadyCompleted = await _dbcontext.Actions.Where(i => i.CreatedAt >= DateTime.Now.Date).ToArrayAsync();
+        habits = await _dbcontext.Habits.Where(c => c.UserId == _UserId).Select(c => new HabitToday(c)).ToListAsync();
+        Models.Action[] AlreadyCompleted = await _dbcontext.Actions
+            .Where(i => i.UserID == _UserId && i.CreatedAt >= DateTime.Now.Date).ToArrayAsync();
         foreach (HabitToday habit in habits)
         {
             if (AlreadyCompleted.Any(i => i.Habit.Id == habit.Id)) { habit.Completed = true; }

@@ -57,8 +57,10 @@ else
 
         int DaysBack = 7;
         _dbcontext = await DbFactory.CreateDbContextAsync();
+        Guid UserID = await UserData.GetCurrentUserGuid(AuthenticationStateProvider);
 
         Habits = await _dbcontext.Habits
+            .Where(habit => habit.UserId == UserID)
             .Select(c => new Habit { 
                 Name = c.Name, 
                 Id = c.Id,
@@ -70,7 +72,7 @@ else
 
         List<Models.Action> Actions = await _dbcontext.Actions
             .Include("Habit")
-            .Where(c => c.CreatedAt >= HowFarBack)
+            .Where(c => c.CreatedAt >= HowFarBack && c.Habit.UserId == UserID)
             .ToListAsync();
 
         foreach (Models.Action a in Actions)

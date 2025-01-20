@@ -1,5 +1,7 @@
 using HabitTracker;
 using HabitTracker.Components;
+using HabitTracker.Components.Account;
+using HabitTracker.Components.Tracker;
 using HabitTracker.Data;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -15,6 +17,7 @@ builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlite(configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddScoped<IdentityRedirectManager>();
 
 builder.Services.AddAuthentication(options =>
     {
@@ -24,6 +27,12 @@ builder.Services.AddAuthentication(options =>
     .AddIdentityCookies();
 builder.Services.AddBlazorBootstrap();
 builder.Services.AddHostedService(ServiceProvider => new DbStartup(configuration));
+builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
+    .AddEntityFrameworkStores<AppDbContext>()
+    .AddSignInManager()
+    .AddDefaultTokenProviders();
+
+builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
 var app = builder.Build();
 
@@ -46,5 +55,7 @@ app.UseAntiforgery();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapAdditionalIdentityEndpoint();
 
 app.Run();

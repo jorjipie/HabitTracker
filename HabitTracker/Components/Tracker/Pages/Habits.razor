@@ -64,16 +64,21 @@ else
     private async Task DeleteHabit(Habit h)
     {
         Habit? habit = _dbcontext?.Habits.First(i => i.Id == h.Id);
-        if (habit != null)
-        {
-            _dbcontext?.Habits.Remove(habit);
-            if (_dbcontext is not null)
-            {
-                await _dbcontext.SaveChangesAsync();
-            }
-            await RefreshHabits();
-        }
+        if (habit is null)
+            throw new Exception("Habit not found!");
+  
+        var actions = _dbcontext?.Actions.Where(a => a.Habit.Id == habit.Id);
 
+        _dbcontext?.Habits.Remove(habit);
+
+        if (actions is not null)
+            _dbcontext?.Actions.RemoveRange(actions);
+
+        if (_dbcontext is not null)
+        {
+            await _dbcontext.SaveChangesAsync();
+        }
+        await RefreshHabits();
     }
     private async Task NewHabitKeyUp(KeyboardEventArgs e)
     {
